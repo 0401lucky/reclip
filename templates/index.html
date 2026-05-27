@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ReClip — Free Media Downloader</title>
+  <title>ReClip - 免费媒体下载器</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -20,12 +20,13 @@
       --error: #c43d3d;
       --radius: 14px;
       --shimmer: linear-gradient(90deg, #ebe8e2 25%, #f0ede7 50%, #ebe8e2 75%);
+      --mono: 'DM Mono', 'Microsoft YaHei', 'PingFang SC', monospace;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'DM Mono', monospace;
+      font-family: var(--mono);
       background: var(--bg);
       color: var(--fg);
       min-height: 100vh;
@@ -73,7 +74,7 @@
       border-radius: var(--radius);
       background: var(--card);
       color: var(--fg);
-      font-family: 'DM Mono', monospace;
+      font-family: var(--mono);
       font-size: 0.88rem;
       outline: none;
       resize: none;
@@ -114,7 +115,7 @@
     }
     .pill {
       padding: 9px 18px;
-      font-family: 'DM Mono', monospace;
+      font-family: var(--mono);
       font-size: 0.76rem;
       border: none;
       background: transparent;
@@ -134,7 +135,7 @@
       border-radius: 10px;
       background: var(--accent);
       color: #fff;
-      font-family: 'DM Mono', monospace;
+      font-family: var(--mono);
       font-size: 0.82rem;
       font-weight: 500;
       cursor: pointer;
@@ -146,7 +147,7 @@
     .fetch-btn:active { transform: scale(0.98); }
     .fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-    /* Cards */
+    /* 卡片 */
     .cards { margin-top: 24px; }
 
     .card {
@@ -180,7 +181,7 @@
       object-fit: cover;
       display: block;
     }
-    /* No-thumbnail icon */
+    /* 无缩略图图标 */
     .card-thumb .no-thumb {
       width: 100%;
       height: 100%;
@@ -195,7 +196,7 @@
       opacity: 0.5;
     }
 
-    /* Shimmer skeleton for loading state */
+    /* 加载中的骨架屏 */
     .card-thumb.loading {
       background: var(--shimmer);
       background-size: 200% 100%;
@@ -254,7 +255,7 @@
       border-radius: 7px;
       background: var(--fg);
       color: var(--bg);
-      font-family: 'DM Mono', monospace;
+      font-family: var(--mono);
       font-size: 0.7rem;
       font-weight: 500;
       cursor: pointer;
@@ -281,7 +282,7 @@
       border-radius: 6px;
       background: transparent;
       color: var(--muted);
-      font-family: 'DM Mono', monospace;
+      font-family: var(--mono);
       font-size: 0.65rem;
       cursor: pointer;
       transition: all 0.2s;
@@ -293,7 +294,7 @@
     }
     .q-chip:hover:not(.active) { border-color: var(--muted); }
 
-    /* Error card */
+    /* 错误卡片 */
     .card.card-error {
       border-color: rgba(196, 61, 61, 0.2);
       background: rgba(196, 61, 61, 0.03);
@@ -324,7 +325,7 @@
       margin-top: 4px;
     }
 
-    /* Download all bar */
+    /* 全部下载栏 */
     .dl-all-bar {
       display: flex;
       gap: 10px;
@@ -337,7 +338,7 @@
       border-radius: 10px;
       background: var(--fg);
       color: var(--bg);
-      font-family: 'DM Mono', monospace;
+      font-family: var(--mono);
       font-size: 0.82rem;
       font-weight: 500;
       cursor: pointer;
@@ -369,7 +370,7 @@
       line-height: 1.8;
     }
 
-    /* Mobile */
+    /* 移动端 */
     @media (max-width: 500px) {
       .brand h1 { font-size: 3rem; }
       .page { padding: 40px 16px 60px; }
@@ -389,29 +390,29 @@
   <div class="page">
     <div class="brand">
       <h1>Re<em>Clip</em></h1>
-      <p>Free media downloader</p>
+      <p>免费媒体下载器</p>
     </div>
 
-    <textarea id="urls" placeholder="Paste one or more URLs..." rows="2"></textarea>
-    <p class="hint">Multiple links? Separate with spaces, commas, or newlines.</p>
+    <textarea id="urls" placeholder="粘贴一个或多个视频链接..." rows="2"></textarea>
+    <p class="hint">多个链接可以用空格、逗号或换行分隔。</p>
 
-    <textarea id="cookies" class="cookies-box" placeholder="Optional cookies.txt content in Netscape format..." rows="4"></textarea>
-    <p class="hint">For Twitter/X sensitive or NSFW posts, paste exported Netscape-format cookies.txt from a logged-in browser.</p>
+    <textarea id="cookies" class="cookies-box" placeholder="可选：粘贴 Netscape 格式 cookies.txt 内容..." rows="4"></textarea>
+    <p class="hint">下载 Twitter/X 敏感或 NSFW 推文时，粘贴已登录浏览器导出的 cookies.txt 内容。</p>
 
     <div class="controls">
       <div class="pill-group">
         <button class="pill active" data-format="video" onclick="setFormat(this)">MP4</button>
         <button class="pill" data-format="audio" onclick="setFormat(this)">MP3</button>
       </div>
-      <button class="fetch-btn" id="goBtn" onclick="go()">Fetch</button>
+      <button class="fetch-btn" id="goBtn" onclick="go()">获取信息</button>
     </div>
 
     <div id="cards" class="cards"></div>
 
     <div class="footer">
-      YouTube &middot; TikTok &middot; Instagram &middot; Twitter/X &middot; Reddit &middot; Facebook<br>
+      支持 YouTube &middot; TikTok &middot; Instagram &middot; Twitter/X &middot; Reddit &middot; Facebook<br>
       Vimeo &middot; Twitch &middot; Dailymotion &middot; SoundCloud &middot; Loom &middot; Streamable<br>
-      Pinterest &middot; Tumblr &middot; Threads &middot; LinkedIn &middot; 1000+ more
+      Pinterest &middot; Tumblr &middot; Threads &middot; LinkedIn 等 1000+ 网站
     </div>
   </div>
 
@@ -443,18 +444,20 @@
     }
 
     function friendlyError(err) {
-      if (err.includes('Netscape-format cookies') || err.includes('login cookies')) return err;
-      if (err.includes('Cookies were supplied')) return err;
-      if (err.includes('No video could be found in this tweet')) return 'Twitter/X may require login cookies for this tweet';
-      if (err.includes('Unsupported URL')) return 'This URL is not supported';
-      if (err.includes('Video unavailable')) return 'Video is unavailable or private';
-      if (err.includes('Private video')) return 'This video is private';
-      if (err.includes('HTTP Error 403')) return 'Access denied by the platform';
-      if (err.includes('HTTP Error 404')) return 'Video not found';
-      if (err.includes('copyright')) return 'Video blocked due to copyright';
-      if (err.includes('geo')) return 'Video not available in your region';
-      if (err.includes('timed out') || err.includes('Timed out')) return 'Request timed out — try again';
-      if (err.includes('network') || err.includes('Network')) return 'Network error — check your connection';
+      if (!err) return '操作失败，请稍后重试';
+      if (/[\u4e00-\u9fa5]/.test(err)) return err;
+      if (err.includes('Netscape-format cookies') || err.includes('login cookies')) return '这个视频可能需要登录 Cookies，请粘贴 Netscape 格式 cookies.txt 后重试';
+      if (err.includes('Cookies were supplied')) return '已提供 Cookies，但平台仍然拒绝访问，请重新导出有效的 cookies.txt 后重试';
+      if (err.includes('No video could be found in this tweet')) return '这个 Twitter/X 推文可能需要登录 Cookies';
+      if (err.includes('Unsupported URL')) return '暂不支持这个链接';
+      if (err.includes('Video unavailable')) return '视频不可用或为私密内容';
+      if (err.includes('Private video')) return '这是私密视频';
+      if (err.includes('HTTP Error 403')) return '平台拒绝访问';
+      if (err.includes('HTTP Error 404')) return '没有找到视频';
+      if (err.includes('copyright')) return '视频因版权限制无法下载';
+      if (err.includes('geo')) return '视频在当前地区不可用';
+      if (err.includes('timed out') || err.includes('Timed out')) return '请求超时，请重试';
+      if (err.includes('network') || err.includes('Network')) return '网络错误，请检查连接';
       return err.length > 80 ? err.slice(0, 80) + '...' : err;
     }
 
@@ -474,7 +477,7 @@
       const btn = document.getElementById('goBtn');
       const container = document.getElementById('cards');
       btn.disabled = true;
-      btn.textContent = 'Loading...';
+      btn.textContent = '获取中...';
       container.innerHTML = '';
       cardData = [];
 
@@ -516,7 +519,7 @@
       }
 
       btn.disabled = false;
-      btn.textContent = 'Fetch';
+      btn.textContent = '获取信息';
     }
 
     function renderCard(idx) {
@@ -529,7 +532,7 @@
         document.getElementById('cards').appendChild(el);
       }
 
-      // Loading skeleton
+      // 加载占位
       if (c.status === 'loading') {
         el.className = 'card';
         el.innerHTML = `
@@ -542,7 +545,7 @@
         return;
       }
 
-      // Error state
+      // 错误状态
       if (c.status === 'info-error') {
         el.className = 'card card-error';
         el.innerHTML = `
@@ -552,7 +555,7 @@
             </div>
           </div>
           <div class="card-body">
-            <div class="card-title" style="color:var(--error)">Could not fetch video</div>
+            <div class="card-title" style="color:var(--error)">无法获取视频信息</div>
             <div class="card-error-msg">${esc(friendlyError(c.error || ''))}</div>
             <div class="card-error-url">${esc(c.url)}</div>
           </div>
@@ -560,7 +563,7 @@
         return;
       }
 
-      // Ready / downloading / done / error states
+      // 就绪、下载中、完成和失败状态
       el.className = 'card';
       const isAudio = currentFormat === 'audio';
 
@@ -582,21 +585,21 @@
 
       let actionHtml = '';
       if (c.status === 'ready') {
-        actionHtml = `<button class="card-dl-btn" onclick="dlCard(${idx})">Download</button>${qualityChips}`;
+        actionHtml = `<button class="card-dl-btn" onclick="dlCard(${idx})">下载</button>${qualityChips}`;
       } else if (c.status === 'downloading') {
-        actionHtml = `<span class="card-status downloading"><span class="spin"></span> Downloading...</span>`;
+        actionHtml = `<span class="card-status downloading"><span class="spin"></span> 下载中...</span>`;
       } else if (c.status === 'done') {
-        actionHtml = `<button class="card-dl-btn done" onclick="saveCard(${idx})">Save</button>
+        actionHtml = `<button class="card-dl-btn done" onclick="saveCard(${idx})">保存</button>
           <span class="card-status done">${esc(c.filename || '')}</span>`;
       } else if (c.status === 'error') {
-        actionHtml = `<button class="card-dl-btn" onclick="dlCard(${idx})">Retry</button>
-          <span class="card-status error">${esc(friendlyError(c.error || 'Download failed'))}</span>`;
+        actionHtml = `<button class="card-dl-btn" onclick="dlCard(${idx})">重试</button>
+          <span class="card-status error">${esc(friendlyError(c.error || '下载失败'))}</span>`;
       }
 
       el.innerHTML = `
         <div class="card-thumb">${thumbHtml}</div>
         <div class="card-body">
-          <div class="card-title">${esc(c.title || 'Untitled')}</div>
+          <div class="card-title">${esc(c.title || '未命名')}</div>
           <div class="card-meta">${esc(c.uploader)}${c.duration ? ' · ' + fmtDur(c.duration) : ''}</div>
           <div class="card-actions">${actionHtml}</div>
         </div>
@@ -610,7 +613,7 @@
       const bar = document.createElement('div');
       bar.id = 'dl-all-bar';
       bar.className = 'dl-all-bar';
-      bar.innerHTML = `<button class="dl-all-btn" onclick="dlAll()">Download All</button>`;
+      bar.innerHTML = `<button class="dl-all-btn" onclick="dlAll()">全部下载</button>`;
       document.getElementById('cards').appendChild(bar);
     }
 
@@ -675,7 +678,7 @@
         } catch {
           clearInterval(iv);
           c.status = 'error';
-          c.error = 'Lost connection to server';
+          c.error = '与服务器连接中断';
           renderCard(idx);
         }
       }, 1000);
@@ -692,7 +695,7 @@
 
     async function dlAll() {
       const btn = document.querySelector('.dl-all-btn');
-      if (btn) { btn.disabled = true; btn.textContent = 'Downloading...'; }
+      if (btn) { btn.disabled = true; btn.textContent = '下载中...'; }
 
       for (let i = 0; i < cardData.length; i++) {
         if (cardData[i].status === 'ready') {
@@ -700,7 +703,7 @@
         }
       }
 
-      if (btn) { btn.disabled = false; btn.textContent = 'Download All'; }
+      if (btn) { btn.disabled = false; btn.textContent = '全部下载'; }
     }
   </script>
 </body>

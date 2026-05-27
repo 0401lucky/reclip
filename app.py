@@ -44,12 +44,12 @@ def ytdlp_error(stderr, cookies_supplied=False):
     text = (stderr or raw).lower()
 
     if any(term in text for term in ("netscape format", "invalid cookie", "cookie file")):
-        return "The supplied cookies could not be read. Paste Netscape-format cookies.txt content exported from your browser and try again."
+        return "无法读取提供的 Cookies。请粘贴从浏览器导出的 Netscape 格式 cookies.txt 内容后重试。"
 
     if "no video could be found in this tweet" in text:
         if cookies_supplied:
-            return "Cookies were supplied, but Twitter/X still did not expose a video. Export fresh Netscape-format cookies.txt from a logged-in browser and try again."
-        return "Twitter/X may require login cookies for this tweet. Paste Netscape-format cookies.txt from a logged-in browser and try again."
+            return "已提供 Cookies，但 Twitter/X 仍未返回视频。请从已登录的浏览器重新导出 Netscape 格式 cookies.txt 后重试。"
+        return "这个 Twitter/X 推文可能需要登录 Cookies。请粘贴 Netscape 格式 cookies.txt 后重试。"
 
     twitter_blocked = ("twitter" in text or "x.com" in text) and any(
         term in text
@@ -62,8 +62,8 @@ def ytdlp_error(stderr, cookies_supplied=False):
 
     if twitter_blocked or login_required:
         if cookies_supplied:
-            return "Cookies were supplied, but the platform still blocked access. Export fresh Netscape-format cookies.txt from a logged-in browser and try again."
-        return "This video may require login cookies. Paste Netscape-format cookies.txt and try again."
+            return "已提供 Cookies，但平台仍然拒绝访问。请重新导出有效的 Netscape 格式 cookies.txt 后重试。"
+        return "这个视频可能需要登录 Cookies。请粘贴 Netscape 格式 cookies.txt 后重试。"
 
     return raw
 
@@ -97,7 +97,7 @@ def run_download(job_id, url, format_choice, format_id, cookies):
         files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{job_id}.*"))
         if not files:
             job["status"] = "error"
-            job["error"] = "Download completed but no file was found"
+            job["error"] = "下载已完成，但未找到生成的文件"
             return
 
         if format_choice == "audio":
@@ -118,7 +118,7 @@ def run_download(job_id, url, format_choice, format_id, cookies):
         job["file"] = chosen
         ext = os.path.splitext(chosen)[1]
         title = job.get("title", "").strip()
-        # Sanitize title for filename
+        # 清理标题，避免生成非法文件名
         if title:
             safe_title = "".join(c for c in title if c not in r'\/:*?"<>|').strip()[:20].strip()
             job["filename"] = f"{safe_title}{ext}" if safe_title else os.path.basename(chosen)
@@ -126,7 +126,7 @@ def run_download(job_id, url, format_choice, format_id, cookies):
             job["filename"] = os.path.basename(chosen)
     except subprocess.TimeoutExpired:
         job["status"] = "error"
-        job["error"] = "Download timed out (5 min limit)"
+        job["error"] = "下载超时（限制 5 分钟）"
     except Exception as e:
         job["status"] = "error"
         job["error"] = str(e)
@@ -145,7 +145,7 @@ def get_info():
     url = data.get("url", "").strip()
     cookies = data.get("cookies", "")
     if not url:
-        return jsonify({"error": "No URL provided"}), 400
+        return jsonify({"error": "请先粘贴链接"}), 400
 
     cookies_path = None
     try:
@@ -161,7 +161,7 @@ def get_info():
 
         info = json.loads(result.stdout)
 
-        # Build quality options — keep best format per resolution
+        # 构建清晰度选项：每个分辨率只保留码率最高的格式
         best_by_height = {}
         for f in info.get("formats", []):
             height = f.get("height")
@@ -187,7 +187,7 @@ def get_info():
             "formats": formats,
         })
     except subprocess.TimeoutExpired:
-        return jsonify({"error": "Timed out fetching video info"}), 400
+        return jsonify({"error": "获取视频信息超时"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     finally:
@@ -204,7 +204,7 @@ def start_download():
     cookies = data.get("cookies", "")
 
     if not url:
-        return jsonify({"error": "No URL provided"}), 400
+        return jsonify({"error": "请先粘贴链接"}), 400
 
     job_id = uuid.uuid4().hex[:10]
     jobs[job_id] = {"status": "downloading", "url": url, "title": title}
@@ -220,7 +220,7 @@ def start_download():
 def check_status(job_id):
     job = jobs.get(job_id)
     if not job:
-        return jsonify({"error": "Job not found"}), 404
+        return jsonify({"error": "任务不存在"}), 404
     return jsonify({
         "status": job["status"],
         "error": job.get("error"),
@@ -232,7 +232,7 @@ def check_status(job_id):
 def download_file(job_id):
     job = jobs.get(job_id)
     if not job or job["status"] != "done":
-        return jsonify({"error": "File not ready"}), 404
+        return jsonify({"error": "文件还未准备好"}), 404
     return send_file(job["file"], as_attachment=True, download_name=job["filename"])
 
 
