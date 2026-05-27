@@ -1,6 +1,7 @@
 import os
 import uuid
 import glob
+import hmac
 import json
 import subprocess
 import tempfile
@@ -16,6 +17,62 @@ DEFAULT_COOKIES_FILE = os.environ.get(
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 jobs = {}
+
+
+def admin_password():
+    return os.environ.get("RECLIP_ADMIN_PASSWORD") or os.environ.get("PASSWORD") or ""
+
+
+def validate_admin_password(password):
+    expected = admin_password()
+    if not expected:
+        return False
+    if not isinstance(password, str):
+        return False
+    return hmac.compare_digest(password, expected)
+
+
+def cookies_diagnostics(cookies):
+    text = cookies.lower()
+    return {
+        "has_x_domain": ".x.com" in text or ".twitter.com" in text,
+        "has_auth_token": "\tauth_token\t" in text or " auth_token " in text,
+        "has_ct0": "\tct0\t" in text or " ct0 " in text,
+    }
+
+
+def normalize_cookies(cookies):
+    if not isinstance(cookies, str):
+        return ""
+    cookies = cookies.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if cookies:
+        cookies += "\n"
+    return cookies
+
+
+def save_default_cookies(cookies):
+    cookies = normalize_cookies(cookies)
+    if not cookies:
+        raise ValueError("Cookies 内容不能为空")
+    if len(cookies.encode("utf-8")) > 5 * 1024 * 1024:
+        raise ValueError("Cookies 文件过大，请确认导出的是否为 cookies.txt 文本")
+
+    first_line = cookies.splitlines()[0] if cookies.splitlines() else ""
+    if not first_line.startswith("#") or "cookie" not in first_line.lower():
+        raise ValueError("请粘贴 Netscape 格式 cookies.txt 内容，首行通常是 # Netscape HTTP Cookie File")
+
+    target_dir = os.path.dirname(DEFAULT_COOKIES_FILE)
+    os.makedirs(target_dir, exist_ok=True)
+    fd, temp_path = tempfile.mkstemp(prefix=".cookies-", suffix=".tmp", dir=target_dir)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+            f.write(cookies)
+        os.replace(temp_path, DEFAULT_COOKIES_FILE)
+    except Exception:
+        remove_temp_file(temp_path)
+        raise
+
+    return cookies_diagnostics(cookies)
 
 
 def write_cookies_file(cookies):
@@ -50,13 +107,24 @@ def default_cookies_status():
             "source": "server",
             "size": 0,
             "updated_at": None,
+            "has_x_domain": False,
+            "has_auth_token": False,
+            "has_ct0": False,
         }
+
+    diagnostics = {"has_x_domain": False, "has_auth_token": False, "has_ct0": False}
+    try:
+        with open(DEFAULT_COOKIES_FILE, "r", encoding="utf-8", errors="ignore") as f:
+            diagnostics = cookies_diagnostics(f.read())
+    except OSError:
+        pass
 
     return {
         "available": stat.st_size > 0,
         "source": "server",
         "size": stat.st_size,
         "updated_at": int(stat.st_mtime),
+        **diagnostics,
     }
 
 
@@ -175,9 +243,43 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/admin")
+def admin():
+    return render_template("admin.html")
+
+
 @app.route("/api/cookies/status")
 def cookies_status():
     return jsonify(default_cookies_status())
+
+
+@app.route("/api/admin/cookies", methods=["POST"])
+def save_cookies():
+    data = request.get_json(silent=True) or {}
+    if not validate_admin_password(data.get("password")):
+        return jsonify({"error": "后台密码不正确，或服务端未配置 PASSWORD/RECLIP_ADMIN_PASSWORD"}), 401
+
+    try:
+        diagnostics = save_default_cookies(data.get("cookies", ""))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"保存失败：{e}"}), 500
+
+    status = default_cookies_status()
+    warnings = []
+    if not diagnostics["has_x_domain"]:
+        warnings.append("未检测到 .x.com 或 .twitter.com 域名，请确认导出的是 X/Twitter 的 Cookies")
+    if not diagnostics["has_auth_token"]:
+        warnings.append("未检测到 auth_token，可能不是已登录 X 账号的 Cookies")
+    if not diagnostics["has_ct0"]:
+        warnings.append("未检测到 ct0，X 请求可能仍会失败")
+
+    return jsonify({
+        "ok": True,
+        "status": status,
+        "warnings": warnings,
+    })
 
 
 @app.route("/api/info", methods=["POST"])

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReClip - 后台配置</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f1eb;
+      --fg: #3a3a38;
+      --accent: #e85d2a;
+      --accent-hover: #d04e1f;
+      --muted: #9c9889;
+      --card: #fff;
+      --card-border: #e2ded6;
+      --success: #2d8a4e;
+      --error: #c43d3d;
+      --radius: 14px;
+      --mono: 'DM Mono', 'Microsoft YaHei', 'PingFang SC', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.03;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 128px;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 34px;
+    }
+
+    h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 3.4rem;
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    h1 em { color: var(--accent); font-style: italic; }
+
+    .sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.7;
+    }
+
+    a {
+      color: var(--fg);
+      text-decoration: none;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 0.76rem;
+      padding-top: 10px;
+      white-space: nowrap;
+    }
+
+    .panel {
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius);
+      background: var(--card);
+      padding: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1.5px solid var(--card-border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--fg);
+      font-family: var(--mono);
+      outline: none;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    input {
+      height: 44px;
+      padding: 0 14px;
+      margin-bottom: 16px;
+      font-size: 0.82rem;
+    }
+
+    textarea {
+      min-height: 360px;
+      padding: 14px;
+      resize: vertical;
+      font-size: 0.72rem;
+      line-height: 1.5;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(232, 93, 42, 0.08);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.68rem;
+      line-height: 1.7;
+      margin: 8px 0 16px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      min-height: 42px;
+      padding: 0 20px;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover { background: var(--accent-hover); }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .status {
+      margin-top: 16px;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--muted);
+      background: rgba(26, 26, 24, 0.04);
+      font-size: 0.72rem;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+
+    .status.ok {
+      color: var(--success);
+      background: rgba(45, 138, 78, 0.08);
+    }
+
+    .status.warn {
+      color: var(--accent);
+      background: rgba(232, 93, 42, 0.08);
+    }
+
+    .status.error {
+      color: var(--error);
+      background: rgba(196, 61, 61, 0.08);
+    }
+
+    @media (max-width: 560px) {
+      .page { padding: 40px 16px 64px; }
+      h1 { font-size: 2.8rem; }
+      .topbar { flex-direction: column; }
+      textarea { min-height: 300px; }
+      .actions { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div>
+        <h1>Re<em>Clip</em> 后台</h1>
+        <p class="sub">保存服务端默认 Cookies。手机端留空时会自动使用这里保存的内容。</p>
+      </div>
+      <a href="/">返回下载页</a>
+    </div>
+
+    <div class="panel">
+      <label for="password">后台密码</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Zeabur 环境变量 PASSWORD 或 RECLIP_ADMIN_PASSWORD">
+
+      <label for="cookies">Netscape cookies.txt</label>
+      <textarea id="cookies" spellcheck="false" placeholder="# Netscape HTTP Cookie File&#10;.x.com&#9;TRUE&#9;/&#9;TRUE&#9;...&#9;auth_token&#9;..."></textarea>
+      <p class="hint">请导出 X/Twitter 的 Cookies，至少应包含 .x.com 或 .twitter.com，以及 auth_token、ct0。保存后内容只写入服务端文件，不会显示回来。</p>
+
+      <div class="actions">
+        <button id="saveBtn" onclick="saveCookies()">保存到服务端</button>
+        <button id="checkBtn" type="button" onclick="refreshStatus()">检查状态</button>
+      </div>
+
+      <div id="status" class="status">正在检查当前服务端 Cookies 状态...</div>
+    </div>
+  </div>
+
+  <script>
+    function fmtBytes(bytes) {
+      if (!bytes) return '0 B';
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    function setStatus(text, type = '') {
+      const el = document.getElementById('status');
+      el.className = `status ${type}`.trim();
+      el.textContent = text;
+    }
+
+    function diagnosticsText(status) {
+      if (!status.available) return '服务端默认 Cookies 未配置。';
+      const checks = [
+        status.has_x_domain ? '已检测到 X/Twitter 域名' : '未检测到 X/Twitter 域名',
+        status.has_auth_token ? '已检测到 auth_token' : '未检测到 auth_token',
+        status.has_ct0 ? '已检测到 ct0' : '未检测到 ct0',
+      ];
+      return `服务端默认 Cookies 已加载（${fmtBytes(status.size)}）。\n${checks.join('；')}。`;
+    }
+
+    async function refreshStatus() {
+      try {
+        const res = await fetch('/api/cookies/status');
+        const status = await res.json();
+        const ok = status.available && status.has_x_domain && status.has_auth_token && status.has_ct0;
+        setStatus(diagnosticsText(status), ok ? 'ok' : 'warn');
+      } catch {
+        setStatus('无法检查服务端 Cookies 状态。', 'error');
+      }
+    }
+
+    async function saveCookies() {
+      const btn = document.getElementById('saveBtn');
+      const password = document.getElementById('password').value;
+      const cookies = document.getElementById('cookies').value;
+      btn.disabled = true;
+      btn.textContent = '保存中...';
+
+      try {
+        const res = await fetch('/api/admin/cookies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password, cookies }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          setStatus(data.error || '保存失败。', 'error');
+          return;
+        }
+        const warnings = data.warnings && data.warnings.length ? `\n${data.warnings.join('\n')}` : '';
+        setStatus(`已保存到服务端。\n${diagnosticsText(data.status)}${warnings}`, warnings ? 'warn' : 'ok');
+        document.getElementById('cookies').value = '';
+      } catch (err) {
+        setStatus(`保存失败：${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '保存到服务端';
+      }
+    }
+
+    refreshStatus();
+  </script>
+</body>
+</html>

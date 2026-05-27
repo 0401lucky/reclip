@@ -51,8 +51,10 @@ ReClip 支持两种提供方式：
 
 - 在网页里临时粘贴 Netscape 格式的 `cookies.txt` 内容。
 - 把服务端默认 Cookies 文件放到 `cookies/x.txt`，网页输入框留空时会自动使用它。
+- 打开 `/admin`，输入后台密码后把 `cookies.txt` 内容保存到服务端默认文件。
 
 也可以通过 `RECLIP_COOKIES_FILE` 覆盖服务端默认路径。
+后台密码读取 `RECLIP_ADMIN_PASSWORD`；如果未配置，则读取 `PASSWORD`。
 
 Docker 示例：
 

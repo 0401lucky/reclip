@@ -118,6 +118,8 @@
     }
     .cookie-status.ready { color: var(--success); }
     .cookie-status.ready::before { background: var(--success); }
+    .cookie-status.warn { color: var(--accent); }
+    .cookie-status.warn::before { background: var(--accent); }
     .cookie-status.missing { color: var(--error); }
     .cookie-status.missing::before { background: var(--error); }
 
@@ -390,6 +392,11 @@
       text-transform: uppercase;
       line-height: 1.8;
     }
+    .footer a {
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 1px solid var(--card-border);
+    }
 
     /* 移动端 */
     @media (max-width: 500px) {
@@ -434,7 +441,8 @@
     <div class="footer">
       支持 YouTube &middot; TikTok &middot; Instagram &middot; Twitter/X &middot; Reddit &middot; Facebook<br>
       Vimeo &middot; Twitch &middot; Dailymotion &middot; SoundCloud &middot; Loom &middot; Streamable<br>
-      Pinterest &middot; Tumblr &middot; Threads &middot; LinkedIn 等 1000+ 网站
+      Pinterest &middot; Tumblr &middot; Threads &middot; LinkedIn 等 1000+ 网站<br>
+      <a href="/admin">后台配置</a>
     </div>
   </div>
 
@@ -503,8 +511,11 @@
         const res = await fetch('/api/cookies/status');
         const data = await res.json();
         if (data.available) {
-          el.className = 'cookie-status ready';
-          el.textContent = `服务端默认 Cookies 已加载（${fmtBytes(data.size)}）`;
+          const validXCookies = data.has_x_domain && data.has_auth_token && data.has_ct0;
+          el.className = validXCookies ? 'cookie-status ready' : 'cookie-status warn';
+          el.textContent = validXCookies
+            ? `服务端默认 Cookies 已加载（${fmtBytes(data.size)}）`
+            : `服务端 Cookies 已加载（${fmtBytes(data.size)}），但未检测到完整 X 登录 Cookies`;
         } else {
           el.className = 'cookie-status missing';
           el.textContent = '服务端默认 Cookies 未配置，手机端留空时不会自动登录 X';
