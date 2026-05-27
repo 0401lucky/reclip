@@ -99,6 +99,27 @@
       margin-bottom: 20px;
       letter-spacing: 0.02em;
     }
+    .cookie-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: -10px;
+      margin-bottom: 20px;
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+    .cookie-status::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .cookie-status.ready { color: var(--success); }
+    .cookie-status.ready::before { background: var(--success); }
+    .cookie-status.missing { color: var(--error); }
+    .cookie-status.missing::before { background: var(--error); }
 
     .controls {
       display: flex;
@@ -398,6 +419,7 @@
 
     <textarea id="cookies" class="cookies-box" placeholder="可选：临时粘贴 Netscape 格式 cookies.txt 内容..." rows="4"></textarea>
     <p class="hint">留空时会使用服务器默认 Cookies；下载 Twitter/X 敏感或 NSFW 推文时可在这里临时覆盖。</p>
+    <div id="cookieStatus" class="cookie-status">正在检查服务端默认 Cookies...</div>
 
     <div class="controls">
       <div class="pill-group">
@@ -461,9 +483,42 @@
       return err.length > 80 ? err.slice(0, 80) + '...' : err;
     }
 
+    function fmtBytes(bytes) {
+      if (!bytes) return '0 B';
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    function cookiesSourceLabel(source) {
+      if (source === 'manual') return '手动 Cookies';
+      if (source === 'server') return '服务端 Cookies';
+      return '未使用 Cookies';
+    }
+
+    async function refreshCookieStatus() {
+      const el = document.getElementById('cookieStatus');
+      if (!el) return;
+      try {
+        const res = await fetch('/api/cookies/status');
+        const data = await res.json();
+        if (data.available) {
+          el.className = 'cookie-status ready';
+          el.textContent = `服务端默认 Cookies 已加载（${fmtBytes(data.size)}）`;
+        } else {
+          el.className = 'cookie-status missing';
+          el.textContent = '服务端默认 Cookies 未配置，手机端留空时不会自动登录 X';
+        }
+      } catch {
+        el.className = 'cookie-status missing';
+        el.textContent = '无法检查服务端默认 Cookies 状态';
+      }
+    }
+
     document.getElementById('urls').addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); }
     });
+    refreshCookieStatus();
 
     function getCookies() {
       return document.getElementById('cookies').value.trim();
@@ -505,6 +560,7 @@
               duration: data.duration,
               uploader: data.uploader || '',
               formats: data.formats || [],
+              cookiesSource: data.cookies_source || 'none',
               selectedFormatId: data.formats?.[0]?.id || null,
             };
           }
@@ -600,7 +656,7 @@
         <div class="card-thumb">${thumbHtml}</div>
         <div class="card-body">
           <div class="card-title">${esc(c.title || '未命名')}</div>
-          <div class="card-meta">${esc(c.uploader)}${c.duration ? ' · ' + fmtDur(c.duration) : ''}</div>
+          <div class="card-meta">${esc(c.uploader)}${c.duration ? ' · ' + fmtDur(c.duration) : ''} · ${cookiesSourceLabel(c.cookiesSource)}</div>
           <div class="card-actions">${actionHtml}</div>
         </div>
       `;

@@ -35,10 +35,29 @@ def write_cookies_file(cookies):
 
 def get_cookies_source(cookies):
     if isinstance(cookies, str) and cookies.strip():
-        return write_cookies_file(cookies), True
+        return write_cookies_file(cookies), True, "manual"
     if os.path.isfile(DEFAULT_COOKIES_FILE):
-        return DEFAULT_COOKIES_FILE, False
-    return None, False
+        return DEFAULT_COOKIES_FILE, False, "server"
+    return None, False, "none"
+
+
+def default_cookies_status():
+    try:
+        stat = os.stat(DEFAULT_COOKIES_FILE)
+    except OSError:
+        return {
+            "available": False,
+            "source": "server",
+            "size": 0,
+            "updated_at": None,
+        }
+
+    return {
+        "available": stat.st_size > 0,
+        "source": "server",
+        "size": stat.st_size,
+        "updated_at": int(stat.st_mtime),
+    }
 
 
 def remove_temp_file(path):
@@ -85,9 +104,10 @@ def run_download(job_id, url, format_choice, format_id, cookies):
     out_template = os.path.join(DOWNLOAD_DIR, f"{job_id}.%(ext)s")
     cookies_path = None
     cookies_is_temp = False
+    cookies_source = "none"
 
     try:
-        cookies_path, cookies_is_temp = get_cookies_source(cookies)
+        cookies_path, cookies_is_temp, cookies_source = get_cookies_source(cookies)
         cmd = ["yt-dlp", "--no-playlist", "-o", out_template]
         if cookies_path:
             cmd += ["--cookies", cookies_path]
@@ -105,6 +125,7 @@ def run_download(job_id, url, format_choice, format_id, cookies):
         if result.returncode != 0:
             job["status"] = "error"
             job["error"] = ytdlp_error(result.stderr, bool(cookies_path))
+            job["cookies_source"] = cookies_source
             return
 
         files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{job_id}.*"))
@@ -128,6 +149,7 @@ def run_download(job_id, url, format_choice, format_id, cookies):
                     pass
 
         job["status"] = "done"
+        job["cookies_source"] = cookies_source
         job["file"] = chosen
         ext = os.path.splitext(chosen)[1]
         title = job.get("title", "").strip()
@@ -153,6 +175,11 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/cookies/status")
+def cookies_status():
+    return jsonify(default_cookies_status())
+
+
 @app.route("/api/info", methods=["POST"])
 def get_info():
     data = request.get_json(silent=True) or {}
@@ -163,8 +190,9 @@ def get_info():
 
     cookies_path = None
     cookies_is_temp = False
+    cookies_source = "none"
     try:
-        cookies_path, cookies_is_temp = get_cookies_source(cookies)
+        cookies_path, cookies_is_temp, cookies_source = get_cookies_source(cookies)
         cmd = ["yt-dlp", "--no-playlist", "-j"]
         if cookies_path:
             cmd += ["--cookies", cookies_path]
@@ -200,6 +228,7 @@ def get_info():
             "duration": info.get("duration"),
             "uploader": info.get("uploader", ""),
             "formats": formats,
+            "cookies_source": cookies_source,
         })
     except subprocess.TimeoutExpired:
         return jsonify({"error": "获取视频信息超时"}), 400
@@ -241,6 +270,7 @@ def check_status(job_id):
         "status": job["status"],
         "error": job.get("error"),
         "filename": job.get("filename"),
+        "cookies_source": job.get("cookies_source"),
     })
 
 
