@@ -81,6 +81,11 @@
       transition: border-color 0.25s, box-shadow 0.25s;
       margin-bottom: 6px;
     }
+    textarea.cookies-box {
+      min-height: 92px;
+      font-size: 0.72rem;
+      line-height: 1.45;
+    }
     textarea:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(232, 93, 42, 0.08);
@@ -390,6 +395,9 @@
     <textarea id="urls" placeholder="Paste one or more URLs..." rows="2"></textarea>
     <p class="hint">Multiple links? Separate with spaces, commas, or newlines.</p>
 
+    <textarea id="cookies" class="cookies-box" placeholder="Optional cookies.txt content in Netscape format..." rows="4"></textarea>
+    <p class="hint">For Twitter/X sensitive or NSFW posts, paste exported Netscape-format cookies.txt from a logged-in browser.</p>
+
     <div class="controls">
       <div class="pill-group">
         <button class="pill active" data-format="video" onclick="setFormat(this)">MP4</button>
@@ -435,6 +443,9 @@
     }
 
     function friendlyError(err) {
+      if (err.includes('Netscape-format cookies') || err.includes('login cookies')) return err;
+      if (err.includes('Cookies were supplied')) return err;
+      if (err.includes('No video could be found in this tweet')) return 'Twitter/X may require login cookies for this tweet';
       if (err.includes('Unsupported URL')) return 'This URL is not supported';
       if (err.includes('Video unavailable')) return 'Video is unavailable or private';
       if (err.includes('Private video')) return 'This video is private';
@@ -451,8 +462,13 @@
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); }
     });
 
+    function getCookies() {
+      return document.getElementById('cookies').value.trim();
+    }
+
     async function go() {
       const urls = parseUrls(document.getElementById('urls').value);
+      const cookies = getCookies();
       if (!urls.length) return;
 
       const btn = document.getElementById('goBtn');
@@ -472,7 +488,7 @@
           const res = await fetch('/api/info', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url }),
+            body: JSON.stringify({ url, cookies }),
           });
           const data = await res.json();
           if (data.error) {
@@ -605,6 +621,7 @@
 
     async function dlCard(idx) {
       const c = cardData[idx];
+      const cookies = getCookies();
       c.status = 'downloading';
       c.error = null;
       renderCard(idx);
@@ -618,6 +635,7 @@
             format: currentFormat,
             format_id: c.selectedFormatId,
             title: c.title || '',
+            cookies,
           }),
         });
         const data = await res.json();

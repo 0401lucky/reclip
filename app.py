@@ -3,6 +3,7 @@ import uuid
 import glob
 import json
 import subprocess
+import tempfile
 import threading
 from flask import Flask, request, jsonify, send_file, render_template
 
@@ -13,26 +14,84 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 jobs = {}
 
 
-def run_download(job_id, url, format_choice, format_id):
+def write_cookies_file(cookies):
+    if not isinstance(cookies, str):
+        cookies = ""
+    cookies = (cookies or "").strip()
+    if not cookies:
+        return None
+
+    fd, path = tempfile.mkstemp(prefix="reclip-cookies-", suffix=".txt")
+    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+        f.write(cookies)
+        if not cookies.endswith("\n"):
+            f.write("\n")
+    return path
+
+
+def remove_temp_file(path):
+    if not path:
+        return
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def ytdlp_error(stderr, cookies_supplied=False):
+    lines = [line.strip() for line in (stderr or "").splitlines() if line.strip()]
+    raw = lines[-1] if lines else "yt-dlp failed"
+    text = (stderr or raw).lower()
+
+    if any(term in text for term in ("netscape format", "invalid cookie", "cookie file")):
+        return "The supplied cookies could not be read. Paste Netscape-format cookies.txt content exported from your browser and try again."
+
+    if "no video could be found in this tweet" in text:
+        if cookies_supplied:
+            return "Cookies were supplied, but Twitter/X still did not expose a video. Export fresh Netscape-format cookies.txt from a logged-in browser and try again."
+        return "Twitter/X may require login cookies for this tweet. Paste Netscape-format cookies.txt from a logged-in browser and try again."
+
+    twitter_blocked = ("twitter" in text or "x.com" in text) and any(
+        term in text
+        for term in ("login", "cookie", "sensitive", "nsfw", "guest", "403", "401", "unauthorized", "forbidden")
+    )
+    login_required = any(
+        term in text
+        for term in ("cookie", "cookies", "login", "log in", "sign in", "authentication", "private", "age-restricted")
+    )
+
+    if twitter_blocked or login_required:
+        if cookies_supplied:
+            return "Cookies were supplied, but the platform still blocked access. Export fresh Netscape-format cookies.txt from a logged-in browser and try again."
+        return "This video may require login cookies. Paste Netscape-format cookies.txt and try again."
+
+    return raw
+
+
+def run_download(job_id, url, format_choice, format_id, cookies):
     job = jobs[job_id]
     out_template = os.path.join(DOWNLOAD_DIR, f"{job_id}.%(ext)s")
-
-    cmd = ["yt-dlp", "--no-playlist", "-o", out_template]
-
-    if format_choice == "audio":
-        cmd += ["-x", "--audio-format", "mp3"]
-    elif format_id:
-        cmd += ["-f", f"{format_id}+bestaudio/best", "--merge-output-format", "mp4"]
-    else:
-        cmd += ["-f", "bestvideo+bestaudio/best", "--merge-output-format", "mp4"]
-
-    cmd.append(url)
+    cookies_path = None
 
     try:
+        cookies_path = write_cookies_file(cookies)
+        cmd = ["yt-dlp", "--no-playlist", "-o", out_template]
+        if cookies_path:
+            cmd += ["--cookies", cookies_path]
+
+        if format_choice == "audio":
+            cmd += ["-x", "--audio-format", "mp3"]
+        elif format_id:
+            cmd += ["-f", f"{format_id}+bestaudio/best", "--merge-output-format", "mp4"]
+        else:
+            cmd += ["-f", "bestvideo+bestaudio/best", "--merge-output-format", "mp4"]
+
+        cmd.append(url)
+
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             job["status"] = "error"
-            job["error"] = result.stderr.strip().split("\n")[-1]
+            job["error"] = ytdlp_error(result.stderr, bool(cookies_path))
             return
 
         files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{job_id}.*"))
@@ -71,6 +130,8 @@ def run_download(job_id, url, format_choice, format_id):
     except Exception as e:
         job["status"] = "error"
         job["error"] = str(e)
+    finally:
+        remove_temp_file(cookies_path)
 
 
 @app.route("/")
@@ -80,16 +141,23 @@ def index():
 
 @app.route("/api/info", methods=["POST"])
 def get_info():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     url = data.get("url", "").strip()
+    cookies = data.get("cookies", "")
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    cmd = ["yt-dlp", "--no-playlist", "-j", url]
+    cookies_path = None
     try:
+        cookies_path = write_cookies_file(cookies)
+        cmd = ["yt-dlp", "--no-playlist", "-j"]
+        if cookies_path:
+            cmd += ["--cookies", cookies_path]
+        cmd.append(url)
+
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if result.returncode != 0:
-            return jsonify({"error": result.stderr.strip().split("\n")[-1]}), 400
+            return jsonify({"error": ytdlp_error(result.stderr, bool(cookies_path))}), 400
 
         info = json.loads(result.stdout)
 
@@ -122,15 +190,18 @@ def get_info():
         return jsonify({"error": "Timed out fetching video info"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+    finally:
+        remove_temp_file(cookies_path)
 
 
 @app.route("/api/download", methods=["POST"])
 def start_download():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     url = data.get("url", "").strip()
     format_choice = data.get("format", "video")
     format_id = data.get("format_id")
     title = data.get("title", "")
+    cookies = data.get("cookies", "")
 
     if not url:
         return jsonify({"error": "No URL provided"}), 400
@@ -138,7 +209,7 @@ def start_download():
     job_id = uuid.uuid4().hex[:10]
     jobs[job_id] = {"status": "downloading", "url": url, "title": title}
 
-    thread = threading.Thread(target=run_download, args=(job_id, url, format_choice, format_id))
+    thread = threading.Thread(target=run_download, args=(job_id, url, format_choice, format_id, cookies))
     thread.daemon = True
     thread.start()
 
