@@ -9,6 +9,10 @@ from flask import Flask, request, jsonify, send_file, render_template
 
 app = Flask(__name__)
 DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), "downloads")
+DEFAULT_COOKIES_FILE = os.environ.get(
+    "RECLIP_COOKIES_FILE",
+    os.path.join(os.path.dirname(__file__), "cookies", "x.txt"),
+)
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 jobs = {}
@@ -27,6 +31,14 @@ def write_cookies_file(cookies):
         if not cookies.endswith("\n"):
             f.write("\n")
     return path
+
+
+def get_cookies_source(cookies):
+    if isinstance(cookies, str) and cookies.strip():
+        return write_cookies_file(cookies), True
+    if os.path.isfile(DEFAULT_COOKIES_FILE):
+        return DEFAULT_COOKIES_FILE, False
+    return None, False
 
 
 def remove_temp_file(path):
@@ -72,9 +84,10 @@ def run_download(job_id, url, format_choice, format_id, cookies):
     job = jobs[job_id]
     out_template = os.path.join(DOWNLOAD_DIR, f"{job_id}.%(ext)s")
     cookies_path = None
+    cookies_is_temp = False
 
     try:
-        cookies_path = write_cookies_file(cookies)
+        cookies_path, cookies_is_temp = get_cookies_source(cookies)
         cmd = ["yt-dlp", "--no-playlist", "-o", out_template]
         if cookies_path:
             cmd += ["--cookies", cookies_path]
@@ -131,7 +144,8 @@ def run_download(job_id, url, format_choice, format_id, cookies):
         job["status"] = "error"
         job["error"] = str(e)
     finally:
-        remove_temp_file(cookies_path)
+        if cookies_is_temp:
+            remove_temp_file(cookies_path)
 
 
 @app.route("/")
@@ -148,8 +162,9 @@ def get_info():
         return jsonify({"error": "请先粘贴链接"}), 400
 
     cookies_path = None
+    cookies_is_temp = False
     try:
-        cookies_path = write_cookies_file(cookies)
+        cookies_path, cookies_is_temp = get_cookies_source(cookies)
         cmd = ["yt-dlp", "--no-playlist", "-j"]
         if cookies_path:
             cmd += ["--cookies", cookies_path]
@@ -191,7 +206,8 @@ def get_info():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     finally:
-        remove_temp_file(cookies_path)
+        if cookies_is_temp:
+            remove_temp_file(cookies_path)
 
 
 @app.route("/api/download", methods=["POST"])
